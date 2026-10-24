@@ -9,5 +9,7 @@ class ApiConstants {
   /// but the current SignUp form UI does not collect an avatar image.
   /// This fallback URL uses a documented, standard, publicly accessible placeholder image.
   static const String defaultAvatarUrl = 'https://picsum.photos/800';
-}
 
+  /// Default product placeholder image when API returns an empty or invalid image list.
+  static const String defaultProductImageUrl = 'https://picsum.photos/640/640';
+}
