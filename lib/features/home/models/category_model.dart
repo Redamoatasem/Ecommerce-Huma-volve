@@ -1,12 +1,10 @@
-class CategoryModel {
-  final int id;
-  final String name;
-  final String image;
+import '../domain/entities/category_entity.dart';
 
+class CategoryModel extends CategoryEntity {
   const CategoryModel({
-    required this.id,
-    required this.name,
-    required this.image,
+    required super.id,
+    required super.name,
+    required super.image,
   });
 
   /// Virtual "All" category representing an unfiltered product query.
@@ -24,16 +22,12 @@ class CategoryModel {
 
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'image': image};
 
+  CategoryEntity toEntity() => this;
+
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CategoryModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+      identical(this, other) || other is CategoryEntity && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
-
-  @override
-  String toString() => 'CategoryModel(id: $id, name: $name)';
 }

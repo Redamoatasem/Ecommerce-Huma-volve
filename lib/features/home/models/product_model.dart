@@ -1,31 +1,26 @@
 import '../../../core/constants/api_constants.dart';
-import '../../../core/dummy_data.dart';
+import '../domain/entities/product_entity.dart';
 import 'category_model.dart';
 
-class ProductModel extends Product {
-  final int apiId;
-  final String title;
-  final CategoryModel? category;
-  final List<String> images;
-
+class ProductModel extends ProductEntity {
   ProductModel({
-    required this.apiId,
-    required this.title,
+    required super.apiId,
+    required super.title,
     required super.price,
     required super.description,
-    required this.images,
+    required super.images,
     String? imageUrl,
-    this.category,
-    super.colors = const [],
+    CategoryModel? category,
     super.sizes = const [],
+    super.colors = const [],
   }) : super(
          id: apiId.toString(),
-         name: title,
          imageUrl: (imageUrl != null && imageUrl.trim().isNotEmpty)
              ? imageUrl.trim()
              : (images.isNotEmpty
                    ? images.first
                    : ApiConstants.defaultProductImageUrl),
+         category: category,
        );
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -53,8 +48,8 @@ class ProductModel extends Product {
       description: desc,
       images: cleanedImages,
       category: categoryObj,
-      colors: const [],
       sizes: const [],
+      colors: const [],
     );
   }
 
@@ -84,18 +79,18 @@ class ProductModel extends Product {
     'price': price,
     'description': description,
     'images': images,
-    if (category != null) 'category': category!.toJson(),
+    if (category != null && category is CategoryModel)
+      'category': (category as CategoryModel).toJson(),
   };
+
+  ProductEntity toEntity() => this;
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProductModel &&
-          runtimeType == other.runtimeType &&
-          apiId == other.apiId;
+      identical(this, other) || other is ProductEntity && id == other.id;
 
   @override
-  int get hashCode => apiId.hashCode;
+  int get hashCode => id.hashCode;
 
   @override
   String toString() => 'ProductModel(id: $apiId, title: $title, price: $price)';

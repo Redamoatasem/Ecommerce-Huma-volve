@@ -1,13 +1,14 @@
+import '../domain/entities/category_entity.dart';
+import '../domain/entities/product_entity.dart';
 import '../models/category_model.dart';
-import '../models/product_model.dart';
 
 enum HomeStatus { initial, loading, success, failure }
 
 class HomeState {
   final HomeStatus status;
-  final List<ProductModel> products;
-  final List<CategoryModel> categories;
-  final CategoryModel selectedCategory;
+  final List<ProductEntity> products;
+  final List<CategoryEntity> categories;
+  final CategoryEntity selectedCategory;
   final String searchQuery;
   final String? errorMessage;
 
@@ -27,9 +28,9 @@ class HomeState {
 
   HomeState copyWith({
     HomeStatus? status,
-    List<ProductModel>? products,
-    List<CategoryModel>? categories,
-    CategoryModel? selectedCategory,
+    List<ProductEntity>? products,
+    List<CategoryEntity>? categories,
+    CategoryEntity? selectedCategory,
     String? searchQuery,
     String? errorMessage,
     bool clearError = false,

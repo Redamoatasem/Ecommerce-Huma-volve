@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../domain/usecases/register_usecase.dart';
 import '../../login/screens/login_screen.dart';
 import '../../models/auth_exception.dart';
-import '../../models/signup_request.dart';
 import '../../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
+  final RegisterUseCase? registerUseCase;
   final AuthService? authService;
 
-  const SignUpScreen({super.key, this.authService});
+  const SignUpScreen({super.key, this.registerUseCase, this.authService});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -22,6 +23,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   late final TextEditingController nameController;
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
+  late final RegisterUseCase _registerUseCase;
   late final AuthService _authService;
   bool _isLoading = false;
 
@@ -32,6 +34,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     emailController = TextEditingController();
     passwordController = TextEditingController();
     _authService = widget.authService ?? AuthService();
+    _registerUseCase = widget.registerUseCase ?? _authService.registerUseCase;
   }
 
   @override
@@ -54,12 +57,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      await _authService.register(
-        SignUpRequest(
-          name: nameController.text.trim(),
-          email: emailController.text.trim(),
-          password: passwordController.text,
-        ),
+      await _registerUseCase(
+        name: nameController.text.trim(),
+        email: emailController.text.trim(),
+        password: passwordController.text,
       );
 
       if (!mounted) return;
@@ -70,7 +71,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registration successful! Please login with your credentials.'),
+          content: Text(
+            'Registration successful! Please login with your credentials.',
+          ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -101,7 +104,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registration failed. Please check your details and try again.'),
+          content: Text(
+            'Registration failed. Please check your details and try again.',
+          ),
           backgroundColor: AppTheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -122,7 +127,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                Icon(Icons.person_add, size: 80, color: AppTheme.primary),
+                const Icon(Icons.person_add, size: 80, color: AppTheme.primary),
                 const SizedBox(height: 32),
                 Text(
                   'Create Account',
@@ -207,23 +212,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     context,
                                     animation,
                                     secondaryAnimation,
-                                  ) =>
-                                      LoginScreen(authService: _authService),
-                                  transitionsBuilder: (
-                                    context,
-                                    animation,
-                                    secondaryAnimation,
-                                    child,
-                                  ) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: child,
-                                    );
-                                  },
+                                  ) => LoginScreen(authService: _authService),
+                                  transitionsBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                        child,
+                                      ) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        );
+                                      },
                                 ),
                               );
                             },
-                      child: Text(
+                      child: const Text(
                         'Login',
                         style: TextStyle(
                           color: AppTheme.primary,

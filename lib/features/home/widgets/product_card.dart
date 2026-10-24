@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/dummy_data.dart';
 import '../../../core/theme.dart';
 import '../../details/screens/product_details_screen.dart';
 
 class ProductCard extends StatelessWidget {
-  final Product product;
+  final dynamic product;
 
   const ProductCard({super.key, required this.product});
 
@@ -58,12 +57,12 @@ class ProductCard extends StatelessWidget {
                         width: double.infinity,
                         height: double.infinity,
                         errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.grey.shade100,
+                          color: Colors.grey.shade200,
                           child: const Center(
                             child: Icon(
-                              Icons.broken_image,
+                              Icons.image_not_supported_outlined,
                               color: Colors.grey,
-                              size: 32,
+                              size: 40,
                             ),
                           ),
                         ),
@@ -75,14 +74,14 @@ class ProductCard extends StatelessWidget {
                     right: 12,
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.favorite_border,
-                        size: 18,
-                        color: AppTheme.accent,
+                        size: 20,
+                        color: Colors.red,
                       ),
                     ),
                   ),
@@ -92,41 +91,37 @@ class ProductCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       product.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        height: 1.2,
-                      ),
-                      maxLines: 2,
+                      style: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           '\$${product.price.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold,
+                          style: TextStyle(
                             fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(
                             color: AppTheme.primary,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
-                            Icons.add,
+                            Icons.add_shopping_cart,
                             color: Colors.white,
                             size: 16,
                           ),

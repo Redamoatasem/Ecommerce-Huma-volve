@@ -4,15 +4,16 @@ import '../../../../core/theme.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../main_navigation/screens/main_navigation_screen.dart';
+import '../../domain/usecases/login_usecase.dart';
 import '../../models/auth_exception.dart';
-import '../../models/login_request.dart';
 import '../../services/auth_service.dart';
 import '../../sign_up/screens/sign_up_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  final LoginUseCase? loginUseCase;
   final AuthService? authService;
 
-  const LoginScreen({super.key, this.authService});
+  const LoginScreen({super.key, this.loginUseCase, this.authService});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -22,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
+  late final LoginUseCase _loginUseCase;
   late final AuthService _authService;
   bool _isLoading = false;
 
@@ -31,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController = TextEditingController();
     passwordController = TextEditingController();
     _authService = widget.authService ?? AuthService();
+    _loginUseCase = widget.loginUseCase ?? _authService.loginUseCase;
   }
 
   @override
@@ -52,19 +55,15 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.login(
-        LoginRequest(
-          email: emailController.text.trim(),
-          password: passwordController.text,
-        ),
+      await _loginUseCase(
+        email: emailController.text.trim(),
+        password: passwordController.text,
       );
 
       if (!mounted) return;
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const MainNavigationScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
       );
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -85,7 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login failed. Please check your credentials and try again.'),
+          content: Text(
+            'Login failed. Please check your credentials and try again.',
+          ),
           backgroundColor: AppTheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -106,7 +107,11 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                Icon(Icons.shopping_bag, size: 80, color: AppTheme.primary),
+                const Icon(
+                  Icons.shopping_bag,
+                  size: 80,
+                  color: AppTheme.primary,
+                ),
                 const SizedBox(height: 32),
                 Text(
                   'Welcome Back!',
@@ -155,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                Align(
+                const Align(
                   alignment: Alignment.centerRight,
                   child: Text(
                     'Forgot Password?',
@@ -187,23 +192,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                     context,
                                     animation,
                                     secondaryAnimation,
-                                  ) =>
-                                      SignUpScreen(authService: _authService),
-                                  transitionsBuilder: (
-                                    context,
-                                    animation,
-                                    secondaryAnimation,
-                                    child,
-                                  ) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: child,
-                                    );
-                                  },
+                                  ) => SignUpScreen(authService: _authService),
+                                  transitionsBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                        child,
+                                      ) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        );
+                                      },
                                 ),
                               );
                             },
-                      child: Text(
+                      child: const Text(
                         'Sign Up',
                         style: TextStyle(
                           color: AppTheme.primary,

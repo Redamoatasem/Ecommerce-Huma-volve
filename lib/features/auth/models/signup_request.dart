@@ -14,10 +14,11 @@ class SignUpRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'email': email,
-        'password': password,
-        'avatar': avatar,
-      };
+    'name': name,
+    'email': email,
+    'password': password,
+    'avatar': avatar,
+  };
 }
 
+typedef SignUpRequestModel = SignUpRequest;

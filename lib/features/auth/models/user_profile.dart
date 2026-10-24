@@ -1,20 +1,14 @@
-class UserProfile {
-  final int id;
-  final String email;
-  final String name;
-  final String role;
-  final String avatar;
-  final DateTime? creationAt;
-  final DateTime? updatedAt;
+import '../domain/entities/user_entity.dart';
 
+class UserProfile extends UserEntity {
   const UserProfile({
-    required this.id,
-    required this.email,
-    required this.name,
-    required this.role,
-    required this.avatar,
-    this.creationAt,
-    this.updatedAt,
+    required super.id,
+    required super.email,
+    required super.name,
+    required super.role,
+    required super.avatar,
+    super.creationAt,
+    super.updatedAt,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -36,13 +30,16 @@ class UserProfile {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'email': email,
-        'name': name,
-        'role': role,
-        'avatar': avatar,
-        if (creationAt != null) 'creationAt': creationAt!.toIso8601String(),
-        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-      };
+    'id': id,
+    'email': email,
+    'name': name,
+    'role': role,
+    'avatar': avatar,
+    if (creationAt != null) 'creationAt': creationAt!.toIso8601String(),
+    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+  };
+
+  UserEntity toEntity() => this;
 }
 
+typedef UserProfileModel = UserProfile;

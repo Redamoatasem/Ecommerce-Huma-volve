@@ -1,136 +1,158 @@
-import 'package:dio/dio.dart';
-
-import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/token_storage.dart';
-import '../models/auth_exception.dart';
+import '../data/datasources/auth_local_data_source.dart';
+import '../data/datasources/auth_remote_data_source.dart';
+import '../data/repositories/auth_repository_impl.dart';
+import '../domain/repositories/auth_repository.dart';
+import '../domain/usecases/check_session_usecase.dart';
+import '../domain/usecases/get_profile_usecase.dart';
+import '../domain/usecases/login_usecase.dart';
+import '../domain/usecases/logout_usecase.dart';
+import '../domain/usecases/register_usecase.dart';
 import '../models/auth_tokens.dart';
 import '../models/login_request.dart';
 import '../models/signup_request.dart';
 import '../models/user_profile.dart';
 
+/// Service facade preserving backwards compatibility while delegating
+/// to Clean Architecture domain use cases and repositories.
 class AuthService {
   final ApiClient apiClient;
   final TokenStorage tokenStorage;
+  final AuthRepository repository;
+  final LoginUseCase loginUseCase;
+  final RegisterUseCase registerUseCase;
+  final GetProfileUseCase getProfileUseCase;
+  final CheckSessionUseCase checkSessionUseCase;
+  final LogoutUseCase logoutUseCase;
 
   AuthService({
     ApiClient? apiClient,
     TokenStorage? tokenStorage,
-  })  : apiClient = apiClient ?? ApiClient(),
-        tokenStorage = tokenStorage ?? SecureTokenStorage();
+    AuthRepository? repository,
+  }) : apiClient = apiClient ?? ApiClient(),
+       tokenStorage = tokenStorage ?? SecureTokenStorage(),
+       repository =
+           repository ??
+           AuthRepositoryImpl(
+             remoteDataSource: AuthRemoteDataSourceImpl(
+               apiClient: apiClient ?? ApiClient(),
+             ),
+             localDataSource: AuthLocalDataSourceImpl(
+               tokenStorage: tokenStorage ?? SecureTokenStorage(),
+             ),
+           ),
+       loginUseCase = LoginUseCase(
+         repository ??
+             AuthRepositoryImpl(
+               remoteDataSource: AuthRemoteDataSourceImpl(
+                 apiClient: apiClient ?? ApiClient(),
+               ),
+               localDataSource: AuthLocalDataSourceImpl(
+                 tokenStorage: tokenStorage ?? SecureTokenStorage(),
+               ),
+             ),
+       ),
+       registerUseCase = RegisterUseCase(
+         repository ??
+             AuthRepositoryImpl(
+               remoteDataSource: AuthRemoteDataSourceImpl(
+                 apiClient: apiClient ?? ApiClient(),
+               ),
+               localDataSource: AuthLocalDataSourceImpl(
+                 tokenStorage: tokenStorage ?? SecureTokenStorage(),
+               ),
+             ),
+       ),
+       getProfileUseCase = GetProfileUseCase(
+         repository ??
+             AuthRepositoryImpl(
+               remoteDataSource: AuthRemoteDataSourceImpl(
+                 apiClient: apiClient ?? ApiClient(),
+               ),
+               localDataSource: AuthLocalDataSourceImpl(
+                 tokenStorage: tokenStorage ?? SecureTokenStorage(),
+               ),
+             ),
+       ),
+       checkSessionUseCase = CheckSessionUseCase(
+         repository ??
+             AuthRepositoryImpl(
+               remoteDataSource: AuthRemoteDataSourceImpl(
+                 apiClient: apiClient ?? ApiClient(),
+               ),
+               localDataSource: AuthLocalDataSourceImpl(
+                 tokenStorage: tokenStorage ?? SecureTokenStorage(),
+               ),
+             ),
+       ),
+       logoutUseCase = LogoutUseCase(
+         repository ??
+             AuthRepositoryImpl(
+               remoteDataSource: AuthRemoteDataSourceImpl(
+                 apiClient: apiClient ?? ApiClient(),
+               ),
+               localDataSource: AuthLocalDataSourceImpl(
+                 tokenStorage: tokenStorage ?? SecureTokenStorage(),
+               ),
+             ),
+       );
 
-  /// Authenticates user credentials via POST /auth/login.
-  /// On success, parses and securely persists the access token.
+  /// Authenticates user credentials via domain use case and persists tokens.
   Future<AuthTokens> login(LoginRequest request) async {
-    if (request.email.trim().isEmpty || request.password.isEmpty) {
-      throw const AuthException('Email and password must not be empty.');
-    }
+    final tokens = await loginUseCase(
+      email: request.email,
+      password: request.password,
+    );
 
-    try {
-      final response = await apiClient.dio.post(
-        ApiEndpoints.login,
-        data: request.toJson(),
-      );
-
-      final data = response.data;
-      if (data == null || data is! Map<String, dynamic>) {
-        throw const AuthException('Invalid or malformed response received from login server.');
-      }
-
-      final tokens = AuthTokens.fromJson(data);
-      await tokenStorage.saveTokens(
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      );
-
-      return tokens;
-    } on DioException catch (e) {
-      throw AuthException.fromDioException(e);
-    } on FormatException catch (e) {
-      throw AuthException(e.message);
-    } catch (e) {
-      if (e is AuthException) rethrow;
-      throw AuthException('Login failed: $e');
-    }
+    return AuthTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
   }
 
-  /// Registers a new user via POST /users/.
-  /// Does NOT automatically persist session or log the user in.
+  /// Registers a new user via domain use case.
   Future<UserProfile> register(SignUpRequest request) async {
-    if (request.name.trim().isEmpty) {
-      throw const AuthException('Full name is required.');
-    }
-    if (request.email.trim().isEmpty) {
-      throw const AuthException('Email address is required.');
-    }
-    if (request.password.length < 6) {
-      throw const AuthException('Password must be at least 6 characters.');
-    }
+    final user = await registerUseCase(
+      name: request.name,
+      email: request.email,
+      password: request.password,
+      avatar: request.avatar,
+    );
 
-    try {
-      final response = await apiClient.dio.post(
-        ApiEndpoints.users,
-        data: request.toJson(),
-      );
-
-      final data = response.data;
-      if (data == null || data is! Map<String, dynamic>) {
-        throw const AuthException('Malformed response received from registration server.');
-      }
-
-      return UserProfile.fromJson(data);
-    } on DioException catch (e) {
-      throw AuthException.fromDioException(e);
-    } catch (e) {
-      if (e is AuthException) rethrow;
-      throw AuthException('Registration failed: $e');
-    }
+    return UserProfile(
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatar: user.avatar,
+      creationAt: user.creationAt,
+      updatedAt: user.updatedAt,
+    );
   }
 
-  /// Retrieves authenticated user profile via GET /auth/profile.
-  /// Uses [explicitToken] if provided, otherwise reads stored access token.
+  /// Retrieves authenticated user profile via domain use case.
   Future<UserProfile> getProfile({String? explicitToken}) async {
-    final token = explicitToken ?? await tokenStorage.getAccessToken();
+    final user = await getProfileUseCase(explicitToken: explicitToken);
 
-    if (token == null || token.trim().isEmpty) {
-      throw const AuthException(
-        'Authentication required: No valid session token found.',
-        statusCode: 401,
-      );
-    }
-
-    try {
-      final response = await apiClient.dio.get(
-        ApiEndpoints.profile,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
-      );
-
-      final data = response.data;
-      if (data == null || data is! Map<String, dynamic>) {
-        throw const AuthException('Malformed response received from profile server.');
-      }
-
-      return UserProfile.fromJson(data);
-    } on DioException catch (e) {
-      throw AuthException.fromDioException(e);
-    } catch (e) {
-      if (e is AuthException) rethrow;
-      throw AuthException('Failed to retrieve profile: $e');
-    }
+    return UserProfile(
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatar: user.avatar,
+      creationAt: user.creationAt,
+      updatedAt: user.updatedAt,
+    );
   }
 
   /// Checks whether an authenticated session exists in secure storage.
   Future<bool> hasSession() async {
-    return tokenStorage.hasAccessToken();
+    return checkSessionUseCase();
   }
 
   /// Clears stored tokens upon logout.
   Future<void> logout() async {
-    await tokenStorage.clearTokens();
+    await logoutUseCase();
   }
 }
-

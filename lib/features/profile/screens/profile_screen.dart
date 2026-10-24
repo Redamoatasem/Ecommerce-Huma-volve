@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../core/dummy_data.dart';
 import '../../../core/theme.dart';
+import '../../auth/data/repositories/auth_repository_impl.dart';
+import '../../auth/domain/usecases/logout_usecase.dart';
 import '../../auth/login/screens/login_screen.dart';
 import '../../auth/services/auth_service.dart';
 import '../widgets/profile_menu_item.dart';
 
 class ProfileScreen extends StatelessWidget {
+  final LogoutUseCase? logoutUseCase;
   final AuthService? authService;
 
-  const ProfileScreen({super.key, this.authService});
+  const ProfileScreen({super.key, this.logoutUseCase, this.authService});
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +24,7 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 24),
             const Text(
               'Profile',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 32),
             Stack(
@@ -54,18 +54,12 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               dummyUser.name,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               dummyUser.email,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 32),
             Expanded(
@@ -103,17 +97,34 @@ class ProfileScreen extends StatelessWidget {
                     title: 'Logout',
                     isDestructive: true,
                     onTap: () async {
-                      final service = authService ?? AuthService();
-                      await service.logout();
+                      final logout =
+                          logoutUseCase ??
+                          (authService?.logoutUseCase ??
+                              LogoutUseCase(AuthRepositoryImpl()));
+                      await logout();
                       if (context.mounted) {
-                        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                        Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pushAndRemoveUntil(
                           PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                                const LoginScreen(),
+                            pageBuilder: (
+                              context,
+                              animation,
+                              secondaryAnimation,
+                            ) => const LoginScreen(),
                             transitionsBuilder:
-                                (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(opacity: animation, child: child);
-                            },
+                                (
+                                  context,
+                                  animation,
+                                  secondaryAnimation,
+                                  child,
+                                ) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
                           ),
                           (route) => false,
                         );
