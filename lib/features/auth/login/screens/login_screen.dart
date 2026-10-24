@@ -1,14 +1,18 @@
-
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../../core/theme.dart';
 import '../../../main_navigation/screens/main_navigation_screen.dart';
+import '../../models/auth_exception.dart';
+import '../../models/login_request.dart';
+import '../../services/auth_service.dart';
 import '../../sign_up/screens/sign_up_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final AuthService? authService;
+
+  const LoginScreen({super.key, this.authService});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -18,13 +22,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
+  late final AuthService _authService;
+  bool _isLoading = false;
 
   @override
   void initState() {
+    super.initState();
     emailController = TextEditingController();
     passwordController = TextEditingController();
-
-    super.initState();
+    _authService = widget.authService ?? AuthService();
   }
 
   @override
@@ -32,6 +38,59 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.login(
+        LoginRequest(
+          email: emailController.text.trim(),
+          password: passwordController.text,
+        ),
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+        ),
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login failed. Please check your credentials and try again.'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -69,10 +128,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!value.contains('@')) {
+                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                    if (!emailRegex.hasMatch(value.trim())) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -108,46 +168,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
                 PrimaryButton(
                   text: 'Login',
-                  onPressed: () {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => MainNavigationScreen(),
-                        ),
-                      );
-                    }
-                  },
+                  isLoading: _isLoading,
+                  onPressed: _isLoading ? () {} : _handleLogin,
                 ),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Don\'t have an account? '),
+                    const Text("Don't have an account? "),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (
-                              context,
-                              animation,
-                              secondaryAnimation,
-                            ) => const SignUpScreen(),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  );
-                                },
-                          ),
-                        );
-                      },
+                      onTap: _isLoading
+                          ? null
+                          : () {
+                              Navigator.pushReplacement(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                  ) =>
+                                      SignUpScreen(authService: _authService),
+                                  transitionsBuilder: (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                    child,
+                                  ) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
                       child: Text(
                         'Sign Up',
                         style: TextStyle(

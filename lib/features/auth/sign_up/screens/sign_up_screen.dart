@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../../core/theme.dart';
 import '../../login/screens/login_screen.dart';
+import '../../models/auth_exception.dart';
+import '../../models/signup_request.dart';
+import '../../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final AuthService? authService;
+
+  const SignUpScreen({super.key, this.authService});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -17,14 +22,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   late final TextEditingController nameController;
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
+  late final AuthService _authService;
+  bool _isLoading = false;
 
   @override
   void initState() {
+    super.initState();
     nameController = TextEditingController();
     emailController = TextEditingController();
     passwordController = TextEditingController();
-
-    super.initState();
+    _authService = widget.authService ?? AuthService();
   }
 
   @override
@@ -33,6 +40,73 @@ class _SignUpScreenState extends State<SignUpScreen> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSignUp() async {
+    if (_isLoading) return;
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.register(
+        SignUpRequest(
+          name: nameController.text.trim(),
+          email: emailController.text.trim(),
+          password: passwordController.text,
+        ),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registration successful! Please login with your credentials.'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LoginScreen(authService: _authService),
+        ),
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registration failed. Please check your details and try again.'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -69,8 +143,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   hintText: 'Full Name',
                   prefixIcon: Icons.person_outline,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your full name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Name must be at least 2 characters';
                     }
                     return null;
                   },
@@ -82,10 +159,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!value.contains('@')) {
+                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                    if (!emailRegex.hasMatch(value.trim())) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -110,16 +188,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 40),
                 PrimaryButton(
                   text: 'Sign Up',
-                  onPressed: () async {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                      );
-                    }
-                  },
+                  isLoading: _isLoading,
+                  onPressed: _isLoading ? () {} : _handleSignUp,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -127,30 +197,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     const Text('Already have an account? '),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (
-                              context,
-                              animation,
-                              secondaryAnimation,
-                            ) => const LoginScreen(),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  );
-                                },
-                          ),
-                        );
-                      },
+                      onTap: _isLoading
+                          ? null
+                          : () {
+                              Navigator.pushReplacement(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                  ) =>
+                                      LoginScreen(authService: _authService),
+                                  transitionsBuilder: (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                    child,
+                                  ) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
                       child: Text(
                         'Login',
                         style: TextStyle(
