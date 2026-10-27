@@ -10,12 +10,73 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const transparentImage = <int>[
-  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49,
-  0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
-  0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44,
-  0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D,
-  0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42,
-  0x60, 0x82,
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0A,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0x0D,
+  0x0A,
+  0x2D,
+  0xB4,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
 ];
 
 class TestHttpOverrides extends HttpOverrides {
@@ -93,6 +154,7 @@ class MockHomeServiceForScreen implements HomeService {
   ];
 
   bool shouldFail = false;
+  Completer<List<ProductModel>>? loadMoreCompleter;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -107,8 +169,13 @@ class MockHomeServiceForScreen implements HomeService {
   Future<List<ProductModel>> getProducts({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     if (shouldFail) throw Exception('Product fetch error');
+    if (offset != null && offset > 0 && loadMoreCompleter != null) {
+      return loadMoreCompleter!.future;
+    }
     return products;
   }
 }
@@ -122,8 +189,9 @@ void main() {
     HttpOverrides.global = null;
   });
 
-  testWidgets('HomeScreen renders products, category chips, and search field',
-      (WidgetTester tester) async {
+  testWidgets('HomeScreen renders products, category chips, and search field', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -134,11 +202,7 @@ void main() {
     final mockService = MockHomeServiceForScreen();
     final cubit = HomeCubit(homeService: mockService);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(homeCubit: cubit),
-      ),
-    );
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(homeCubit: cubit)));
 
     // Initial pump and settle
     await tester.pump();
@@ -161,8 +225,9 @@ void main() {
     cubit.close();
   });
 
-  testWidgets('HomeScreen renders error state with retry button on failure',
-      (WidgetTester tester) async {
+  testWidgets('HomeScreen renders error state with retry button on failure', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -173,11 +238,7 @@ void main() {
     final mockService = MockHomeServiceForScreen()..shouldFail = true;
     final cubit = HomeCubit(homeService: mockService);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(homeCubit: cubit),
-      ),
-    );
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(homeCubit: cubit)));
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -188,8 +249,9 @@ void main() {
     cubit.close();
   });
 
-  testWidgets('HomeScreen renders empty state when products list is empty',
-      (WidgetTester tester) async {
+  testWidgets('HomeScreen renders empty state when products list is empty', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -200,11 +262,7 @@ void main() {
     final mockService = MockHomeServiceForScreen()..products = [];
     final cubit = HomeCubit(homeService: mockService);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(homeCubit: cubit),
-      ),
-    );
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(homeCubit: cubit)));
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -213,5 +271,144 @@ void main() {
 
     cubit.close();
   });
-}
 
+  testWidgets(
+    'HomeScreen renders pagination loading indicator when isLoadingMore is true',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 6000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final completer = Completer<List<ProductModel>>();
+      final mockService = MockHomeServiceForScreen();
+      mockService.products = List.generate(
+        10,
+        (index) => ProductModel(
+          apiId: index + 1,
+          title: 'Product $index',
+          price: 50.0,
+          description: 'Test',
+          images: const ['https://placehold.co/600x400'],
+        ),
+      );
+      mockService.loadMoreCompleter = completer;
+
+      final cubit = HomeCubit(homeService: mockService);
+
+      await tester.pumpWidget(MaterialApp(home: HomeScreen(homeCubit: cubit)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(cubit.state.hasReachedMax, isFalse);
+
+      // Trigger loadMoreProducts while completer is uncompleted
+      unawaited(cubit.loadMoreProducts());
+      await tester.pump(const Duration(milliseconds: 10));
+
+      expect(cubit.state.isLoadingMore, isTrue);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // Complete the future
+      completer.complete([
+        ProductModel(
+          apiId: 50,
+          title: 'Product 50',
+          price: 50.0,
+          description: 'New item',
+          images: const ['https://placehold.co/600x400'],
+        ),
+      ]);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(cubit.state.isLoadingMore, isFalse);
+      expect(find.text('Product 50'), findsOneWidget);
+
+      cubit.close();
+    },
+  );
+
+  testWidgets('HomeScreen renders pagination error and retry button', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final mockService = MockHomeServiceForScreen();
+    mockService.products = List.generate(
+      10,
+      (index) => ProductModel(
+        apiId: index + 1,
+        title: 'Product $index',
+        price: 50.0,
+        description: 'Test',
+        images: const ['https://placehold.co/600x400'],
+      ),
+    );
+    final cubit = HomeCubit(homeService: mockService);
+
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(homeCubit: cubit)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(cubit.state.hasReachedMax, isFalse);
+
+    // Now fail subsequent page
+    mockService.shouldFail = true;
+    await cubit.loadMoreProducts();
+    await tester.pump();
+
+    expect(find.text('Could not load more products'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    // Tapping retry triggers loadMoreProducts
+    mockService.shouldFail = false;
+    mockService.products = [
+      ProductModel(
+        apiId: 99,
+        title: 'Product 99',
+        price: 99.0,
+        description: 'New page item',
+        images: const ['https://placehold.co/600x400'],
+      ),
+    ];
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Could not load more products'), findsNothing);
+    expect(find.text('Product 99'), findsOneWidget);
+
+    cubit.close();
+  });
+
+  testWidgets(
+    'HomeScreen renders end-of-list message when hasReachedMax is true',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final mockService = MockHomeServiceForScreen();
+      final cubit = HomeCubit(homeService: mockService);
+
+      await tester.pumpWidget(MaterialApp(home: HomeScreen(homeCubit: cubit)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('All products loaded'), findsOneWidget);
+
+      cubit.close();
+    },
+  );
+}

@@ -8,7 +8,12 @@ import '../../models/product_model.dart';
 
 abstract class HomeRemoteDataSource {
   Future<List<CategoryModel>> getCategories();
-  Future<List<ProductModel>> getProducts({int? categoryId, String? searchTerm});
+  Future<List<ProductModel>> getProducts({
+    int? categoryId,
+    String? searchTerm,
+    int? offset,
+    int? limit,
+  });
 }
 
 class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
@@ -45,6 +50,8 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<List<ProductModel>> getProducts({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     try {
       final Map<String, dynamic> queryParameters = {};
@@ -53,6 +60,13 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         queryParameters['categoryId'] = categoryId;
       } else if (searchTerm != null && searchTerm.trim().isNotEmpty) {
         queryParameters['title'] = searchTerm.trim();
+      }
+
+      if (offset != null) {
+        queryParameters['offset'] = offset;
+      }
+      if (limit != null) {
+        queryParameters['limit'] = limit;
       }
 
       final response = await apiClient.dio.get(

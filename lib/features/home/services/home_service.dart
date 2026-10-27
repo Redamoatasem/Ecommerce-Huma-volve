@@ -21,14 +21,19 @@ class HomeService {
   }
 
   /// Fetches products from GET /products.
-  /// Supports optional category filtering (categoryId) and title searching (searchTerm).
+  /// Supports optional category filtering (categoryId), title searching (searchTerm),
+  /// and pagination parameters (offset, limit).
   Future<List<ProductModel>> getProducts({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     return remoteDataSource.getProducts(
       categoryId: categoryId,
       searchTerm: searchTerm,
+      offset: offset,
+      limit: limit,
     );
   }
 }

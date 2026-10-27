@@ -9,10 +9,14 @@ class GetProductsUseCase {
   Future<List<ProductEntity>> call({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     return repository.getProducts(
       categoryId: categoryId,
       searchTerm: searchTerm,
+      offset: offset,
+      limit: limit,
     );
   }
 }

@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 class FakeHomeDomainRepository implements HomeRepository {
   int? lastCategoryId;
   String? lastSearchTerm;
+  int? lastOffset;
+  int? lastLimit;
 
   final sampleCategories = [
     const CategoryEntity(id: 1, name: 'Shoes', image: 'shoes.jpg'),
@@ -35,9 +37,13 @@ class FakeHomeDomainRepository implements HomeRepository {
   Future<List<ProductEntity>> getProducts({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     lastCategoryId = categoryId;
     lastSearchTerm = searchTerm;
+    lastOffset = offset;
+    lastLimit = limit;
     return sampleProducts;
   }
 }
@@ -59,17 +65,21 @@ void main() {
       expect(categories[1].name, 'Clothes');
     });
 
-    test(
-      'GetProductsUseCase passes filters and search term to repository',
-      () async {
-        final useCase = GetProductsUseCase(repository);
-        final products = await useCase(categoryId: 5, searchTerm: 'Running');
+    test('GetProductsUseCase passes filters, search term, offset, and limit to repository', () async {
+      final useCase = GetProductsUseCase(repository);
+      final products = await useCase(
+        categoryId: 5,
+        searchTerm: 'Running',
+        offset: 10,
+        limit: 20,
+      );
 
-        expect(repository.lastCategoryId, 5);
-        expect(repository.lastSearchTerm, 'Running');
-        expect(products.length, 1);
-        expect(products.first.title, 'Sneakers');
-      },
-    );
+      expect(repository.lastCategoryId, 5);
+      expect(repository.lastSearchTerm, 'Running');
+      expect(repository.lastOffset, 10);
+      expect(repository.lastLimit, 20);
+      expect(products.length, 1);
+      expect(products.first.title, 'Sneakers');
+    });
   });
 }

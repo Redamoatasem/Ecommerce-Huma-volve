@@ -13,6 +13,9 @@ class FakeHomeService implements HomeService {
 
   int? lastCategoryIdRequested;
   String? lastSearchTermRequested;
+  int? lastOffsetRequested;
+  int? lastLimitRequested;
+  int getProductsCallCount = 0;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -27,10 +30,15 @@ class FakeHomeService implements HomeService {
   Future<List<ProductModel>> getProducts({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     if (shouldThrow) throw Exception(errorMessage);
+    getProductsCallCount++;
     lastCategoryIdRequested = categoryId;
     lastSearchTermRequested = searchTerm;
+    lastOffsetRequested = offset;
+    lastLimitRequested = limit;
     return productsToReturn;
   }
 }
@@ -185,7 +193,152 @@ void main() {
       await homeCubit.refresh();
 
       expect(fakeService.lastCategoryIdRequested, 2);
+      expect(fakeService.lastOffsetRequested, 0);
+      expect(fakeService.lastLimitRequested, 10);
       expect(homeCubit.state.status, HomeStatus.success);
     });
+  });
+
+  group('HomeCubit Pagination', () {
+    List<ProductModel> generateProducts(int count, {int startId = 1}) {
+      return List.generate(
+        count,
+        (index) => ProductModel(
+          apiId: startId + index,
+          title: 'Product ${startId + index}',
+          price: 20.0 + index,
+          description: 'Desc',
+          images: ['https://picsum.photos/${startId + index}'],
+        ),
+      );
+    }
+
+    test(
+      'Initial load passes offset 0, limit 10 and sets hasReachedMax',
+      () async {
+        final tenProducts = generateProducts(10);
+        fakeService.productsToReturn = tenProducts;
+
+        await homeCubit.loadHomeData();
+
+        expect(fakeService.lastOffsetRequested, 0);
+        expect(fakeService.lastLimitRequested, 10);
+        expect(homeCubit.state.products.length, 10);
+        expect(homeCubit.state.hasReachedMax, isFalse);
+      },
+    );
+
+    test(
+      'Initial load with fewer than pageSize items sets hasReachedMax to true',
+      () async {
+        fakeService.productsToReturn = generateProducts(5);
+
+        await homeCubit.loadHomeData();
+
+        expect(fakeService.lastOffsetRequested, 0);
+        expect(fakeService.lastLimitRequested, 10);
+        expect(homeCubit.state.products.length, 5);
+        expect(homeCubit.state.hasReachedMax, isTrue);
+      },
+    );
+
+    test(
+      'loadMoreProducts appends items and calculates offset from product count',
+      () async {
+        fakeService.productsToReturn = generateProducts(10, startId: 1);
+        await homeCubit.loadHomeData();
+        expect(homeCubit.state.products.length, 10);
+        expect(homeCubit.state.hasReachedMax, isFalse);
+
+        fakeService.productsToReturn = generateProducts(5, startId: 11);
+        await homeCubit.loadMoreProducts();
+
+        expect(fakeService.lastOffsetRequested, 10);
+        expect(fakeService.lastLimitRequested, 10);
+        expect(homeCubit.state.products.length, 15);
+        expect(homeCubit.state.hasReachedMax, isTrue);
+        expect(homeCubit.state.isLoadingMore, isFalse);
+        expect(homeCubit.state.paginationErrorMessage, isNull);
+      },
+    );
+
+    test('loadMoreProducts deduplicates items by ID', () async {
+      fakeService.productsToReturn = generateProducts(10, startId: 1);
+      await homeCubit.loadHomeData();
+
+      // Return overlapping items (id 10 already exists)
+      fakeService.productsToReturn = [
+        ...generateProducts(1, startId: 10),
+        ...generateProducts(2, startId: 11),
+      ];
+      await homeCubit.loadMoreProducts();
+
+      // Total should be 10 + 2 = 12 (id 10 was not duplicated)
+      expect(homeCubit.state.products.length, 12);
+    });
+
+    test('loadMoreProducts does nothing when hasReachedMax is true', () async {
+      fakeService.productsToReturn = generateProducts(5);
+      await homeCubit.loadHomeData();
+      expect(homeCubit.state.hasReachedMax, isTrue);
+
+      final callsBefore = fakeService.getProductsCallCount;
+      await homeCubit.loadMoreProducts();
+
+      expect(fakeService.getProductsCallCount, callsBefore);
+    });
+
+    test('loadMoreProducts handles failure by setting paginationErrorMessage without wiping products', () async {
+      fakeService.productsToReturn = generateProducts(10);
+      await homeCubit.loadHomeData();
+      expect(homeCubit.state.products.length, 10);
+
+      fakeService.shouldThrow = true;
+      fakeService.errorMessage = 'Network timeout on page 2';
+
+      await homeCubit.loadMoreProducts();
+
+      expect(homeCubit.state.status, HomeStatus.success);
+      expect(homeCubit.state.products.length, 10);
+      expect(homeCubit.state.isLoadingMore, isFalse);
+      expect(
+        homeCubit.state.paginationErrorMessage,
+        contains('Network timeout on page 2'),
+      );
+    });
+
+    test(
+      'selectCategory resets offset to 0 and clears pagination error',
+      () async {
+        fakeService.productsToReturn = generateProducts(10);
+        await homeCubit.loadHomeData();
+
+        fakeService.productsToReturn = generateProducts(3, startId: 50);
+        await homeCubit.selectCategory(sampleCategories[0]);
+
+        expect(fakeService.lastOffsetRequested, 0);
+        expect(fakeService.lastLimitRequested, 10);
+        expect(fakeService.lastCategoryIdRequested, sampleCategories[0].id);
+        expect(homeCubit.state.products.length, 3);
+        expect(homeCubit.state.hasReachedMax, isTrue);
+      },
+    );
+
+    test(
+      'searchProducts resets offset to 0 and re-evaluates hasReachedMax',
+      () async {
+        fakeService.productsToReturn = generateProducts(10);
+        await homeCubit.loadHomeData();
+
+        fakeService.productsToReturn = generateProducts(10, startId: 100);
+        await homeCubit.searchProducts('phone');
+
+        expect(fakeService.lastOffsetRequested, 0);
+        expect(fakeService.lastLimitRequested, 10);
+        expect(fakeService.lastSearchTermRequested, 'phone');
+        expect(homeCubit.state.products.length, 10);
+        expect(homeCubit.state.hasReachedMax, isFalse);
+      },
+    );
   });
 }

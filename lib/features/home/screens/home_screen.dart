@@ -22,12 +22,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final HomeCubit _homeCubit;
   late final TextEditingController _searchController;
+  late final ScrollController _scrollController;
   Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     _homeCubit = widget.homeCubit ?? HomeCubit();
     if (_homeCubit.state.status == HomeStatus.initial) {
       _homeCubit.loadHomeData();
@@ -38,10 +41,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _debounceTimer?.cancel();
     _searchController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     if (widget.homeCubit == null) {
       _homeCubit.close();
     }
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (maxScroll - currentScroll <= 200) {
+      _homeCubit.loadMoreProducts();
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -66,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppTheme.primary,
                 onRefresh: () => _homeCubit.refresh(),
                 child: CustomScrollView(
+                  controller: _scrollController,
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
@@ -133,8 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.grey.withValues(alpha: 0.05),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 5),
+                                    spreadRadius: 2,
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
@@ -182,7 +198,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     label: category.name,
                                     isSelected: isSelected,
                                     onTap: () {
-                                      _searchController.clear();
                                       _homeCubit.selectCategory(category);
                                     },
                                   );
@@ -194,32 +209,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     if (state.isLoading)
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 48.0),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(
-                                  color: AppTheme.primary,
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Loading products...',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.primary,
                           ),
                         ),
                       )
                     else if (state.isFailure)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
+                      SliverFillRemaining(
+                        child: Center(
                           child: Container(
-                            padding: const EdgeInsets.all(24.0),
+                            margin: const EdgeInsets.all(24),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
@@ -232,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(
                                   Icons.error_outline,
@@ -315,7 +318,73 @@ class _HomeScreenState extends State<HomeScreen> {
                           }, childCount: state.products.length),
                         ),
                       ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    if (state.isLoadingMore)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24.0),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (state.paginationErrorMessage != null)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16.0,
+                            horizontal: 24.0,
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Could not load more products',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _homeCubit.loadMoreProducts(),
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Retry'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (state.hasReachedMax && state.products.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24.0),
+                          child: Center(
+                            child: Text(
+                              'All products loaded',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   ],
                 ),
               );

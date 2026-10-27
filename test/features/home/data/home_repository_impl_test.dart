@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 class FakeHomeRemoteDataSource implements HomeRemoteDataSource {
   int? lastCategoryId;
   String? lastSearchTerm;
+  int? lastOffset;
+  int? lastLimit;
 
   final sampleCategories = [
     const CategoryModel(id: 1, name: 'Shoes', image: 'shoes.jpg'),
@@ -30,9 +32,13 @@ class FakeHomeRemoteDataSource implements HomeRemoteDataSource {
   Future<List<ProductModel>> getProducts({
     int? categoryId,
     String? searchTerm,
+    int? offset,
+    int? limit,
   }) async {
     lastCategoryId = categoryId;
     lastSearchTerm = searchTerm;
+    lastOffset = offset;
+    lastLimit = limit;
     return sampleProducts;
   }
 }
@@ -55,20 +61,21 @@ void main() {
       expect(categories.first.name, 'Shoes');
     });
 
-    test(
-      'getProducts passes categoryId and searchTerm and maps to ProductEntity',
-      () async {
-        final products = await repository.getProducts(
-          categoryId: 3,
-          searchTerm: 'Nike',
-        );
+    test('getProducts passes categoryId, searchTerm, offset, and limit and maps to ProductEntity', () async {
+      final products = await repository.getProducts(
+        categoryId: 3,
+        searchTerm: 'Nike',
+        offset: 20,
+        limit: 10,
+      );
 
-        expect(remoteDataSource.lastCategoryId, 3);
-        expect(remoteDataSource.lastSearchTerm, 'Nike');
-        expect(products.length, 1);
-        expect(products.first.id, '10');
-        expect(products.first.title, 'Sneakers');
-      },
-    );
+      expect(remoteDataSource.lastCategoryId, 3);
+      expect(remoteDataSource.lastSearchTerm, 'Nike');
+      expect(remoteDataSource.lastOffset, 20);
+      expect(remoteDataSource.lastLimit, 10);
+      expect(products.length, 1);
+      expect(products.first.id, '10');
+      expect(products.first.title, 'Sneakers');
+    });
   });
 }

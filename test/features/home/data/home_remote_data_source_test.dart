@@ -105,6 +105,47 @@ void main() {
       expect(products.first.title, 'Running shoes');
     });
 
+    test(
+      'getProducts with offset and limit sends pagination query parameters',
+      () async {
+        mockAdapter.handler = (options) async {
+          expect(options.path, ApiEndpoints.products);
+          expect(options.queryParameters['offset'], 10);
+          expect(options.queryParameters['limit'], 5);
+          return MockHttpClientAdapter.jsonResponse([
+            {
+              'id': 30,
+              'title': 'Desk Lamp',
+              'price': 25.0,
+              'description': 'Lamp',
+              'images': ['https://placehold.co/lamp.jpg'],
+            },
+          ]);
+        };
+
+        final products = await remoteDataSource.getProducts(
+          offset: 10,
+          limit: 5,
+        );
+        expect(products.length, 1);
+        expect(products.first.title, 'Desk Lamp');
+      },
+    );
+
+    test('getProducts returns empty list on empty page response', () async {
+      mockAdapter.handler = (options) async {
+        expect(options.path, ApiEndpoints.products);
+        expect(options.queryParameters['offset'], 1000);
+        return MockHttpClientAdapter.jsonResponse([]);
+      };
+
+      final products = await remoteDataSource.getProducts(
+        offset: 1000,
+        limit: 10,
+      );
+      expect(products, isEmpty);
+    });
+
     test('getCategories throws AuthException on malformed response', () async {
       mockAdapter.handler = (options) async {
         return MockHttpClientAdapter.jsonResponse({'error': 'bad'});

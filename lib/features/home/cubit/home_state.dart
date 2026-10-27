@@ -11,6 +11,9 @@ class HomeState {
   final CategoryEntity selectedCategory;
   final String searchQuery;
   final String? errorMessage;
+  final bool isLoadingMore;
+  final bool hasReachedMax;
+  final String? paginationErrorMessage;
 
   const HomeState({
     this.status = HomeStatus.initial,
@@ -19,6 +22,9 @@ class HomeState {
     this.selectedCategory = CategoryModel.all,
     this.searchQuery = '',
     this.errorMessage,
+    this.isLoadingMore = false,
+    this.hasReachedMax = false,
+    this.paginationErrorMessage,
   });
 
   bool get isLoading => status == HomeStatus.loading;
@@ -34,6 +40,10 @@ class HomeState {
     String? searchQuery,
     String? errorMessage,
     bool clearError = false,
+    bool? isLoadingMore,
+    bool? hasReachedMax,
+    String? paginationErrorMessage,
+    bool clearPaginationError = false,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -42,6 +52,11 @@ class HomeState {
       selectedCategory: selectedCategory ?? this.selectedCategory,
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      paginationErrorMessage: clearPaginationError
+          ? null
+          : (paginationErrorMessage ?? this.paginationErrorMessage),
     );
   }
 
@@ -54,6 +69,9 @@ class HomeState {
           selectedCategory == other.selectedCategory &&
           searchQuery == other.searchQuery &&
           errorMessage == other.errorMessage &&
+          isLoadingMore == other.isLoadingMore &&
+          hasReachedMax == other.hasReachedMax &&
+          paginationErrorMessage == other.paginationErrorMessage &&
           products.length == other.products.length &&
           categories.length == other.categories.length;
 
@@ -63,6 +81,9 @@ class HomeState {
     selectedCategory,
     searchQuery,
     errorMessage,
+    isLoadingMore,
+    hasReachedMax,
+    paginationErrorMessage,
     products.length,
     categories.length,
   );
