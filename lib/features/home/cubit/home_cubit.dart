@@ -339,4 +339,9 @@ class _LegacyHomeServiceAdapter implements HomeRepository {
       limit: limit,
     );
   }
+
+  @override
+  Future<ProductEntity> getProductById(int id) async {
+    return _service.getProductById(id);
+  }
 }

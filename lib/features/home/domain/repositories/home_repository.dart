@@ -12,4 +12,7 @@ abstract class HomeRepository {
     int? offset,
     int? limit,
   });
+
+  /// Fetches a single product by its unique integer identifier.
+  Future<ProductEntity> getProductById(int id);
 }

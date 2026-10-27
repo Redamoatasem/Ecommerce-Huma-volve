@@ -156,5 +156,119 @@ void main() {
         throwsA(isA<AuthException>()),
       );
     });
+
+    test('getProductById successfully fetches and parses single product', () async {
+      mockAdapter.handler = (options) async {
+        expect(options.path, '${ApiEndpoints.products}/42');
+        return MockHttpClientAdapter.jsonResponse({
+          'id': 42,
+          'title': 'Mechanical Keyboard',
+          'price': 129.99,
+          'description': 'Tactile switches',
+          'images': ['https://placehold.co/600x400'],
+          'category': {'id': 2, 'name': 'Electronics', 'image': 'https://placehold.co/100'},
+        });
+      };
+
+      final product = await remoteDataSource.getProductById(42);
+      expect(product.apiId, 42);
+      expect(product.title, 'Mechanical Keyboard');
+      expect(product.price, 129.99);
+      expect(product.category?.name, 'Electronics');
+    });
+
+    test('getProductById throws not found AuthException when 404 occurs', () async {
+      mockAdapter.handler = (options) async {
+        return MockHttpClientAdapter.jsonResponse(
+          {'name': 'EntityNotFoundError', 'message': 'Product not found'},
+          statusCode: 404,
+        );
+      };
+
+      expect(
+        () => remoteDataSource.getProductById(999),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            contains('Product not found'),
+          ),
+        ),
+      );
+    });
+
+    test('getProductById throws AuthException on malformed response', () async {
+      mockAdapter.handler = (options) async {
+        return MockHttpClientAdapter.jsonResponse(
+          'not a json map',
+        );
+      };
+
+      expect(
+        () => remoteDataSource.getProductById(42),
+        throwsA(isA<AuthException>()),
+      );
+    });
+
+    test(
+      'getProductById successfully fetches and parses single product',
+      () async {
+        mockAdapter.handler = (options) async {
+          expect(options.path, '${ApiEndpoints.products}/42');
+          return MockHttpClientAdapter.jsonResponse({
+            'id': 42,
+            'title': 'Mechanical Keyboard',
+            'price': 129.99,
+            'description': 'Tactile switches',
+            'images': ['https://placehold.co/600x400'],
+            'category': {
+              'id': 2,
+              'name': 'Electronics',
+              'image': 'https://placehold.co/100',
+            },
+          });
+        };
+
+        final product = await remoteDataSource.getProductById(42);
+        expect(product.apiId, 42);
+        expect(product.title, 'Mechanical Keyboard');
+        expect(product.price, 129.99);
+        expect(product.category?.name, 'Electronics');
+      },
+    );
+
+    test(
+      'getProductById throws not found AuthException when 404 occurs',
+      () async {
+        mockAdapter.handler = (options) async {
+          return MockHttpClientAdapter.jsonResponse({
+            'name': 'EntityNotFoundError',
+            'message': 'Product not found',
+          }, statusCode: 404);
+        };
+
+        expect(
+          () => remoteDataSource.getProductById(999),
+          throwsA(
+            isA<AuthException>().having(
+              (e) => e.message,
+              'message',
+              contains('Product not found'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test('getProductById throws AuthException on malformed response', () async {
+      mockAdapter.handler = (options) async {
+        return MockHttpClientAdapter.jsonResponse('not a json map');
+      };
+
+      expect(
+        () => remoteDataSource.getProductById(42),
+        throwsA(isA<AuthException>()),
+      );
+    });
   });
 }

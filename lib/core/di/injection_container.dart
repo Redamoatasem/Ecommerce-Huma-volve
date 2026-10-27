@@ -13,8 +13,10 @@ import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/repositories/home_repository_impl.dart';
 import '../../features/home/domain/repositories/home_repository.dart';
 import '../../features/home/domain/usecases/get_categories_usecase.dart';
+import '../../features/home/domain/usecases/get_product_by_id_usecase.dart';
 import '../../features/home/domain/usecases/get_products_usecase.dart';
 import '../../features/home/cubit/home_cubit.dart';
+import '../../features/details/cubit/product_details_cubit.dart';
 
 /// Lightweight dependency composition locator for the application.
 class ServiceLocator {
@@ -64,12 +66,21 @@ class ServiceLocator {
   late final GetProductsUseCase getProductsUseCase = GetProductsUseCase(
     homeRepository,
   );
+  late final GetProductByIdUseCase getProductByIdUseCase =
+      GetProductByIdUseCase(homeRepository);
 
   // Home - Cubit factory
   HomeCubit createHomeCubit() => HomeCubit(
     getCategoriesUseCase: getCategoriesUseCase,
     getProductsUseCase: getProductsUseCase,
   );
+
+  // Product Details - Cubit factory
+  ProductDetailsCubit createProductDetailsCubit({dynamic initialProduct}) =>
+      ProductDetailsCubit(
+        getProductByIdUseCase: getProductByIdUseCase,
+        initialProduct: initialProduct,
+      );
 }
 
 final sl = ServiceLocator();

@@ -2,6 +2,7 @@ import 'package:ecommerce_app_huma_volve/features/home/domain/entities/category_
 import 'package:ecommerce_app_huma_volve/features/home/domain/entities/product_entity.dart';
 import 'package:ecommerce_app_huma_volve/features/home/domain/repositories/home_repository.dart';
 import 'package:ecommerce_app_huma_volve/features/home/domain/usecases/get_categories_usecase.dart';
+import 'package:ecommerce_app_huma_volve/features/home/domain/usecases/get_product_by_id_usecase.dart';
 import 'package:ecommerce_app_huma_volve/features/home/domain/usecases/get_products_usecase.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -46,6 +47,14 @@ class FakeHomeDomainRepository implements HomeRepository {
     lastLimit = limit;
     return sampleProducts;
   }
+
+  @override
+  Future<ProductEntity> getProductById(int id) async {
+    return sampleProducts.firstWhere(
+      (p) => p.apiId == id,
+      orElse: () => sampleProducts.first,
+    );
+  }
 }
 
 void main() {
@@ -80,6 +89,14 @@ void main() {
       expect(repository.lastLimit, 20);
       expect(products.length, 1);
       expect(products.first.title, 'Sneakers');
+    });
+
+    test('GetProductByIdUseCase calls repository.getProductById', () async {
+      final useCase = GetProductByIdUseCase(repository);
+      final product = await useCase(1);
+
+      expect(product.apiId, 1);
+      expect(product.title, 'Sneakers');
     });
   });
 }

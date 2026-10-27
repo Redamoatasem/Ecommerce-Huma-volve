@@ -41,6 +41,14 @@ class FakeHomeRemoteDataSource implements HomeRemoteDataSource {
     lastLimit = limit;
     return sampleProducts;
   }
+
+  @override
+  Future<ProductModel> getProductById(int id) async {
+    return sampleProducts.firstWhere(
+      (p) => p.apiId == id,
+      orElse: () => sampleProducts.first,
+    );
+  }
 }
 
 void main() {

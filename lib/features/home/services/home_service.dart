@@ -36,4 +36,9 @@ class HomeService {
       limit: limit,
     );
   }
+
+  /// Fetches a single product by its unique integer identifier from GET /products/{id}.
+  Future<ProductModel> getProductById(int id) async {
+    return remoteDataSource.getProductById(id);
+  }
 }

@@ -14,6 +14,7 @@ abstract class HomeRemoteDataSource {
     int? offset,
     int? limit,
   });
+  Future<ProductModel> getProductById(int id);
 }
 
 class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
@@ -88,6 +89,29 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     } catch (e) {
       if (e is AuthException) rethrow;
       throw AuthException('Failed to load products: $e');
+    }
+  }
+
+  @override
+  Future<ProductModel> getProductById(int id) async {
+    try {
+      final response = await apiClient.dio.get('${ApiEndpoints.products}/$id');
+      final data = response.data;
+      if (data == null || data is! Map<String, dynamic>) {
+        throw AuthException('Malformed product response for product ID $id.');
+      }
+      return ProductModel.fromJson(data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404 ||
+          (e.response?.statusCode == 400 &&
+              e.response?.data != null &&
+              e.response!.data.toString().contains('EntityNotFoundError'))) {
+        throw AuthException('Product not found (ID: $id).');
+      }
+      throw AuthException.fromDioException(e);
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Failed to load product $id: $e');
     }
   }
 }
